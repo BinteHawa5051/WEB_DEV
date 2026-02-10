@@ -63,6 +63,92 @@ async def get_judges(
     judges = query.all()
     return judges
 
+@router.get("/workload-analysis")
+async def analyze_judge_workload(
+    court_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Analyze judge workload distribution and identify imbalances
+    Returns workload statistics and rebalancing suggestions
+    """
+    query = db.query(Judge)
+    if court_id:
+        query = query.filter(Judge.court_id == court_id)
+    
+    judges = query.all()
+    
+    if not judges:
+        return {
+            "total_judges": 0,
+            "workload_stats": {},
+            "imbalanced_judges": [],
+            "suggestions": []
+        }
+    
+    # Calculate workload statistics
+    workloads = [j.current_workload or 0 for j in judges]
+    avg_workload = sum(workloads) / len(workloads) if workloads else 0
+    max_workload = max(workloads) if workloads else 0
+    min_workload = min(workloads) if workloads else 0
+    
+    # Identify overloaded judges (>2x average or >80%)
+    overloaded = []
+    underloaded = []
+    
+    for judge in judges:
+        workload = judge.current_workload or 0
+        if workload > avg_workload * 2 or workload > 80:
+            overloaded.append({
+                "judge_id": judge.id,
+                "judge_name": judge.user.full_name if judge.user else f"Judge {judge.id}",
+                "current_workload": workload,
+                "excess": workload - avg_workload,
+                "severity": "critical" if workload > 90 else "high" if workload > 80 else "moderate"
+            })
+        elif workload < avg_workload * 0.5 and judge.is_available:
+            underloaded.append({
+                "judge_id": judge.id,
+                "judge_name": judge.user.full_name if judge.user else f"Judge {judge.id}",
+                "current_workload": workload,
+                "capacity": avg_workload - workload
+            })
+    
+    # Generate rebalancing suggestions
+    suggestions = []
+    if overloaded and underloaded:
+        for over in overloaded[:3]:  # Top 3 overloaded
+            for under in underloaded[:2]:  # Top 2 underloaded
+                cases_to_transfer = min(3, int(over["excess"] / 2))
+                if cases_to_transfer > 0:
+                    suggestions.append({
+                        "from_judge_id": over["judge_id"],
+                        "from_judge": over["judge_name"],
+                        "to_judge_id": under["judge_id"],
+                        "to_judge": under["judge_name"],
+                        "suggested_cases_count": cases_to_transfer,
+                        "reason": f"Reduce workload imbalance ({over['current_workload']}% → {over['current_workload'] - cases_to_transfer*5}%)"
+                    })
+    
+    return {
+        "total_judges": len(judges),
+        "available_judges": len([j for j in judges if j.is_available]),
+        "workload_stats": {
+            "average": round(avg_workload, 1),
+            "maximum": max_workload,
+            "minimum": min_workload,
+            "std_deviation": round(
+                (sum((w - avg_workload) ** 2 for w in workloads) / len(workloads)) ** 0.5, 1
+            ) if len(workloads) > 1 else 0
+        },
+        "overloaded_judges": overloaded,
+        "underloaded_judges": underloaded,
+        "balance_score": round(100 - (max_workload - min_workload), 1),  # 100 = perfect balance
+        "suggestions": suggestions,
+        "needs_rebalancing": len(overloaded) > 0
+    }
+
 @router.get("/{judge_id}", response_model=JudgeResponse)
 async def get_judge(
     judge_id: int,

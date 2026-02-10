@@ -286,12 +286,14 @@ async def get_ml_status(
                 "/analyze-case - Complete case analysis",
                 "/predict-duration - Hearing duration prediction",
                 "/predict-outcome - Case outcome prediction",
-                "/recommend-judges - Judge recommendations"
+                "/recommend-judges - Judge recommendations",
+                "/predict-settlement - Settlement probability prediction"
             ],
             "model_info": {
                 "outcome_model": "XGBoost Classifier",
                 "duration_model": "XGBoost Regressor",
                 "judge_recommendation": "Cosine Similarity Matching",
+                "settlement_prediction": "Trained ML Model (settlement_model.pkl)",
                 "preprocessing": "TF-IDF + LDA + Categorical Encoding"
             }
         }
@@ -302,3 +304,46 @@ async def get_ml_status(
             "error": str(e),
             "models_loaded": False
         }
+
+class SettlementPredictionRequest(BaseModel):
+    """Request model for settlement probability prediction"""
+    case_type: str = Field(..., description="Type of case (e.g., 'Civil', 'Criminal')")
+    district: str = Field(..., description="District name (e.g., 'Northern District', 'Southern District')")
+    days_to_resolution: int = Field(default=120, ge=0, description="Days to resolution (optional, defaults to 120)")
+
+class SettlementPredictionResponse(BaseModel):
+    """Response model for settlement prediction"""
+    settlement_probability: float
+    settlement_prediction: int
+    recommend_mediation: bool
+    recommend_early_settlement: bool
+    confidence: str
+    reasoning: str
+    estimated_settlement_days: int
+    action_items: list
+    settlement_category: str
+
+@router.post("/predict-settlement", response_model=SettlementPredictionResponse)
+async def predict_settlement(
+    request: SettlementPredictionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Predict settlement probability using trained ML model
+    """
+    try:
+        ml_service = get_ml_service()
+        
+        result = ml_service.predict_settlement_probability(
+            case_type=request.case_type,
+            district=request.district,
+            days_to_resolution=request.days_to_resolution
+        )
+        
+        return SettlementPredictionResponse(**result)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error predicting settlement: {str(e)}"
+        )

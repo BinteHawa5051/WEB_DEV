@@ -126,6 +126,9 @@ const Cases: React.FC = () => {
                     Urgency
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Public Interest
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Filing Date
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -157,6 +160,14 @@ const Cases: React.FC = () => {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getUrgencyColor(caseItem.urgency_level)}`}>
                         {caseItem.urgency_level.replace('_', ' ')}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-8 w-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-800 font-semibold text-sm">
+                          {caseItem.public_interest_score || 0}
+                        </div>
+                        <span className="ml-2 text-xs text-gray-500">/10</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(caseItem.filing_date).toLocaleDateString()}

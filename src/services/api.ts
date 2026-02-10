@@ -64,6 +64,7 @@ export const casesAPI = {
   searchByNumber: (caseNumber: string) => api.get(`/cases/search/${caseNumber}`),
   assignJudge: (caseId: number, judgeId: number) => 
     api.put(`/cases/${caseId}/assign-judge`, { judge_id: judgeId }),
+  calculateComplexity: (data: any) => api.post('/cases/calculate-complexity', null, { params: data }),
 };
 
 export const judgesAPI = {
@@ -73,6 +74,10 @@ export const judgesAPI = {
   updateAvailability: (id: number, isAvailable: boolean) => 
     api.put(`/judges/${id}/availability`, { is_available: isAvailable }),
   createRecusal: (judgeId: number, caseId: number, reason: string) => 
+    api.post('/judges/recusals', { judge_id: judgeId, case_id: caseId, reason }),
+  getWorkloadAnalysis: (courtId?: number) => 
+    api.get('/judges/workload-analysis', { params: { court_id: courtId } }),
+};
     api.post(`/judges/${judgeId}/recusal`, { case_id: caseId, reason }),
   getWorkload: (id: number) => api.get(`/judges/${id}/workload`),
   getSchedule: (id: number, startDate?: string, endDate?: string) => 
@@ -148,6 +153,7 @@ export const mlAPI = {
   predictDuration: (data: any) => api.post('/ml/predict-duration', data),
   predictOutcome: (data: any) => api.post('/ml/predict-outcome', data),
   recommendJudges: (data: any) => api.post('/ml/recommend-judges', data),
+  predictSettlement: (data: any) => api.post('/ml/predict-settlement', data),
   
   // ML service status
   getMLStatus: () => api.get('/ml/ml-status'),

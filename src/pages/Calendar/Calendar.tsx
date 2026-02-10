@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from 'react-query';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { calendarAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -8,6 +8,18 @@ const Calendar: React.FC = () => {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week' | 'day'>('week');
+  const [filters, setFilters] = useState({
+    caseType: '',
+    judge: '',
+    urgency: '',
+  });
+
+  // Get capacity color based on workload percentage
+  const getCapacityColor = (capacity: number) => {
+    if (capacity < 50) return { bg: 'bg-green-100', text: 'text-green-800', label: 'Light', icon: CheckCircle };
+    if (capacity < 80) return { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Moderate', icon: Clock };
+    return { bg: 'bg-red-100', text: 'text-red-800', label: 'Overloaded', icon: AlertCircle };
+  };
 
   // Get week start date
   const getWeekStart = (date: Date) => {
@@ -80,6 +92,44 @@ const Calendar: React.FC = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="bg-white shadow rounded-lg p-4">
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-gray-700">Filters:</span>
+          <select
+            value={filters.caseType}
+            onChange={(e) => setFilters({...filters, caseType: e.target.value})}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">All Case Types</option>
+            <option value="civil">Civil</option>
+            <option value="criminal">Criminal</option>
+            <option value="family">Family</option>
+            <option value="tax">Tax</option>
+            <option value="constitutional">Constitutional</option>
+          </select>
+          <select
+            value={filters.urgency}
+            onChange={(e) => setFilters({...filters, urgency: e.target.value})}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">All Urgency Levels</option>
+            <option value="habeas_corpus">Habeas Corpus</option>
+            <option value="bail">Bail</option>
+            <option value="injunction">Injunction</option>
+            <option value="regular">Regular</option>
+          </select>
+          {filters.caseType || filters.urgency ? (
+            <button
+              onClick={() => setFilters({ caseType: '', judge: '', urgency: '' })}
+              className="px-3 py-2 text-sm text-blue-600 hover:text-blue-800"
+            >
+              Clear Filters
+            </button>
+          ) : null}
+        </div>
+      </div>
+
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -107,21 +157,55 @@ const Calendar: React.FC = () => {
           </div>
         </div>
 
+        {/* Capacity Legend */}
+        <div className="mb-4 flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+          <span className="text-sm font-medium text-gray-700">Workload Capacity:</span>
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <span className="text-xs text-gray-600">Light (&lt;50%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-yellow-600" />
+            <span className="text-xs text-gray-600">Moderate (50-80%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <span className="text-xs text-gray-600">Overloaded (&gt;80%)</span>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
         ) : (
           <div className="space-y-4">
-            {weekData?.data?.schedule && Object.entries(weekData.data.schedule).map(([day, data]: [string, any]) => (
-              <div key={day} className="border rounded-lg p-4">
+            {weekData?.data?.schedule && Object.entries(weekData.data.schedule).map(([day, data]: [string, any]) => {
+              const hearingCount = data.total_hearings || 0;
+              const capacity = Math.min(100, (hearingCount / 10) * 100); // Assume 10 hearings = 100% capacity
+              const capacityInfo = getCapacityColor(capacity);
+              const CapacityIcon = capacityInfo.icon;
+              
+              return (
+              <div key={day} className={`border rounded-lg p-4 ${capacityInfo.bg} border-l-4 ${capacityInfo.text.replace('text-', 'border-')}`}>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-gray-900">
-                    {day} - {new Date(data.date).toLocaleDateString()}
-                  </h3>
-                  <span className="text-sm text-gray-500">
-                    {data.total_hearings || 0} hearings
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-medium text-gray-900">
+                      {day} - {new Date(data.date).toLocaleDateString()}
+                    </h3>
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${capacityInfo.bg} ${capacityInfo.text}`}>
+                      <CapacityIcon className="h-3 w-3" />
+                      <span className="text-xs font-medium">{capacityInfo.label}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-700">
+                      {hearingCount} hearings
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      ({capacity.toFixed(0)}% capacity)
+                    </span>
+                  </div>
                 </div>
                 {data.is_working_day ? (
                   <div className="space-y-2">
@@ -148,7 +232,8 @@ const Calendar: React.FC = () => {
                   <p className="text-sm text-gray-500">Weekend - No hearings</p>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

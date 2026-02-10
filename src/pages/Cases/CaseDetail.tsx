@@ -159,6 +159,24 @@ const CaseDetail: React.FC = () => {
               )}
             </div>
           </div>
+
+          {/* Connected Cases Section */}
+          {caseItem.connected_cases && caseItem.connected_cases.length > 0 && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Connected Cases</h2>
+              <div className="space-y-2">
+                {caseItem.connected_cases.map((connectedId: number) => (
+                  <div key={connectedId} className="flex items-center justify-between p-3 bg-gray-50 rounded-md hover:bg-gray-100 cursor-pointer" onClick={() => navigate(`/cases/${connectedId}`)}>
+                    <div className="flex items-center">
+                      <FileText className="h-4 w-4 text-gray-400 mr-2" />
+                      <span className="text-sm font-medium text-gray-900">Case #{connectedId}</span>
+                    </div>
+                    <ArrowLeft className="h-4 w-4 text-gray-400 transform rotate-180" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">

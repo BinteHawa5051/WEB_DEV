@@ -31,6 +31,8 @@ class MLService:
         # Model placeholders
         self.model_duration = None
         self.model_outcome = None
+        self.model_settlement = None
+        self.settlement_encoder = None
         self.vectorizer = None
         self.lda = None
         self.categorical_cols = None
@@ -76,6 +78,15 @@ class MLService:
             judges_csv_path = self.models_path / "judges_dataset.csv"
             self.judges_df = pd.read_csv(judges_csv_path)
             print(f"✓ Loaded judges dataset from {judges_csv_path}")
+            
+            # Load settlement prediction model
+            settlement_path = self.models_path / "settlement_model.pkl"
+            self.model_settlement = joblib.load(settlement_path)
+            print(f"✓ Loaded settlement prediction model from {settlement_path}")
+            
+            settlement_encoder_path = self.models_path / "encoder.pkl"
+            self.settlement_encoder = joblib.load(settlement_encoder_path)
+            print(f"✓ Loaded settlement encoder from {settlement_encoder_path}")
             
             self.models_loaded = True
             print("✅ All ML models loaded successfully!")
@@ -295,6 +306,121 @@ class MLService:
                 for _, row in judges_ranked.iterrows()
             ]
         }
+    
+    def predict_settlement_probability(
+        self,
+        case_type: str,
+        district: str,
+        days_to_resolution: int = None
+    ) -> dict:
+        """
+        Predict settlement probability using trained ML model
+        
+        Args:
+            case_type: Type of case (e.g., 'Civil', 'Criminal')
+            district: District name (e.g., 'Northern District', 'Southern District')
+            days_to_resolution: Days to resolution (optional, defaults to 120)
+            
+        Returns:
+            dict: Settlement analysis with probability and prediction
+        """
+        if not self.models_loaded:
+            raise RuntimeError("ML models not loaded")
+        
+        try:
+            # Default days_to_resolution if not provided
+            if days_to_resolution is None:
+                days_to_resolution = 120
+            
+            # Create case data DataFrame
+            case_data = {
+                'Case_Type': case_type,
+                'District': district,
+                'Days_to_Resolution': days_to_resolution
+            }
+            df = pd.DataFrame([case_data])
+            
+            # Encode categorical features
+            cat_cols = ['Case_Type', 'District']
+            encoded_cat = self.settlement_encoder.transform(df[cat_cols])
+            
+            # Create numeric features
+            df['num_parties'] = 2  # Default value
+            df['complexity'] = df['Days_to_Resolution'].fillna(0)
+            df['case_age_days'] = df['Days_to_Resolution'].fillna(0)
+            num_features = df[['num_parties', 'complexity', 'case_age_days']].values
+            
+            # Combine features
+            X = np.hstack([encoded_cat, num_features])
+            
+            # Predict
+            settlement_prob = self.model_settlement.predict_proba(X)[0][1]
+            settlement_pred = self.model_settlement.predict(X)[0]
+            
+            # Generate recommendations based on probability
+            recommend_mediation = settlement_prob > 0.6
+            recommend_early_settlement = settlement_prob > 0.7
+            
+            # Calculate confidence
+            if settlement_prob < 0.3 or settlement_prob > 0.7:
+                confidence = "High"
+            elif 0.35 < settlement_prob < 0.65:
+                confidence = "Medium"
+            else:
+                confidence = "Low"
+            
+            # Estimate settlement timeline
+            if settlement_prob > 0.7:
+                estimated_days = 30 + int(days_to_resolution * 0.2)
+            elif settlement_prob > 0.5:
+                estimated_days = 45 + int(days_to_resolution * 0.3)
+            else:
+                estimated_days = 60 + int(days_to_resolution * 0.4)
+            
+            # Generate action items
+            action_items = []
+            if recommend_mediation:
+                action_items.append("Schedule mediation session")
+                action_items.append("Prepare settlement proposal")
+            if recommend_early_settlement:
+                action_items.append("Consider early settlement conference")
+                action_items.append("Evaluate cost-benefit of trial vs settlement")
+            if settlement_prob < 0.4:
+                action_items.append("Prepare for trial")
+                action_items.append("Focus on evidence gathering")
+            
+            # Generate reasoning
+            reasons = []
+            if settlement_prob > 0.7:
+                reasons.append("High settlement probability based on case characteristics")
+            elif settlement_prob > 0.5:
+                reasons.append("Moderate settlement likelihood")
+            else:
+                reasons.append("Low settlement probability, trial likely")
+            
+            reasons.append(f"Case type: {case_type}")
+            reasons.append(f"District: {district}")
+            
+            return {
+                "settlement_probability": round(float(settlement_prob), 4),
+                "settlement_prediction": int(settlement_pred),
+                "recommend_mediation": recommend_mediation,
+                "recommend_early_settlement": recommend_early_settlement,
+                "confidence": confidence,
+                "reasoning": "; ".join(reasons),
+                "estimated_settlement_days": estimated_days,
+                "action_items": action_items,
+                "settlement_category": (
+                    "Highly Likely" if settlement_prob > 0.7 else
+                    "Likely" if settlement_prob > 0.55 else
+                    "Possible" if settlement_prob > 0.4 else
+                    "Unlikely"
+                )
+            }
+            
+        except Exception as e:
+            print(f"Error in settlement prediction: {e}")
+            raise
 
 
 # Global ML service instance

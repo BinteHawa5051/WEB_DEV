@@ -17,6 +17,11 @@ const Judges: React.FC = () => {
     })
   );
 
+  const { data: workloadData } = useQuery(
+    ['workload-analysis', user?.court_id],
+    () => judgesAPI.getWorkloadAnalysis(user?.court_id)
+  );
+
   const judges = judgesData?.data || [];
 
   const filteredJudges = judges.filter((judge: any) =>
@@ -31,6 +36,49 @@ const Judges: React.FC = () => {
           <p className="text-gray-600">Manage judge profiles and workload</p>
         </div>
       </div>
+
+      {/* Workload Analysis Section */}
+      {workloadData?.data && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Workload Analysis</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Average Workload</p>
+              <p className="text-2xl font-bold text-blue-600">{workloadData.data.workload_stats.average}%</p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Balance Score</p>
+              <p className="text-2xl font-bold text-green-600">{workloadData.data.balance_score}/100</p>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Overloaded Judges</p>
+              <p className="text-2xl font-bold text-red-600">{workloadData.data.overloaded_judges.length}</p>
+            </div>
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Available Capacity</p>
+              <p className="text-2xl font-bold text-yellow-600">{workloadData.data.underloaded_judges.length}</p>
+            </div>
+          </div>
+
+          {workloadData.data.needs_rebalancing && workloadData.data.suggestions.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-yellow-900 mb-3">⚠️ Rebalancing Suggestions</h3>
+              <div className="space-y-2">
+                {workloadData.data.suggestions.slice(0, 3).map((suggestion: any, idx: number) => (
+                  <div key={idx} className="bg-white p-3 rounded-md border border-yellow-200">
+                    <p className="text-sm text-gray-900">
+                      Transfer <strong>{suggestion.suggested_cases_count} cases</strong> from{' '}
+                      <strong>{suggestion.from_judge}</strong> to <strong>{suggestion.to_judge}</strong>
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">{suggestion.reason}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex flex-col sm:flex-row gap-4 mb-6">

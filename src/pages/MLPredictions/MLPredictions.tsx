@@ -14,10 +14,24 @@ interface AnalysisResult {
   analysis_summary: string;
 }
 
+interface SettlementResult {
+  settlement_probability: number;
+  settlement_prediction: number;
+  recommend_mediation: boolean;
+  recommend_early_settlement: boolean;
+  confidence: string;
+  reasoning: string;
+  estimated_settlement_days: number;
+  action_items: string[];
+  settlement_category: string;
+}
+
 const MLPredictions: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [settlementResult, setSettlementResult] = useState<SettlementResult | null>(null);
   const [activeTab, setActiveTab] = useState<'basic' | 'advanced'>('basic');
+  const [showSettlement, setShowSettlement] = useState(false);
   
   const [formData, setFormData] = useState({
     facts_text: '',
@@ -31,6 +45,12 @@ const MLPredictions: React.FC = () => {
     lawyer_win_rate: 0.5,
     case_complexity: 0.5,
     top_judges: 3,
+  });
+
+  const [settlementData, setSettlementData] = useState({
+    case_type: 'Civil',
+    district: 'Northern District',
+    days_to_resolution: 120,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -58,6 +78,23 @@ const MLPredictions: React.FC = () => {
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Failed to analyze case');
       console.error('Analysis error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSettlementPredict = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const response = await mlAPI.predictSettlement(settlementData);
+      setSettlementResult(response.data);
+      setShowSettlement(true);
+      toast.success('Settlement prediction completed!');
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to predict settlement');
+      console.error('Settlement error:', error);
     } finally {
       setLoading(false);
     }
@@ -115,7 +152,7 @@ const MLPredictions: React.FC = () => {
           <div className="stat-card">
             <Sparkles size={24} />
             <div>
-              <div className="stat-value">3</div>
+              <div className="stat-value">4</div>
               <div className="stat-label">AI Models</div>
             </div>
           </div>
@@ -328,7 +365,134 @@ const MLPredictions: React.FC = () => {
               )}
             </button>
           </form>
+
+          {/* Settlement Probability Section */}
+          <div className="settlement-section" style={{ marginTop: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', color: 'white' }}>
+            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Scale size={20} />
+              Quick Settlement Prediction
+            </h3>
+            <form onSubmit={handleSettlementPredict}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Case Type</label>
+                  <select 
+                    value={settlementData.case_type}
+                    onChange={(e) => setSettlementData({...settlementData, case_type: e.target.value})}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: 'none' }}
+                  >
+                    <option value="Civil">Civil</option>
+                    <option value="Criminal">Criminal</option>
+                    <option value="Family">Family</option>
+                    <option value="Tax">Tax</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>District</label>
+                  <select 
+                    value={settlementData.district}
+                    onChange={(e) => setSettlementData({...settlementData, district: e.target.value})}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: 'none' }}
+                  >
+                    <option value="Northern District">Northern District</option>
+                    <option value="Southern District">Southern District</option>
+                    <option value="Eastern District">Eastern District</option>
+                    <option value="Western District">Western District</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Days to Resolution</label>
+                  <input 
+                    type="number"
+                    value={settlementData.days_to_resolution}
+                    onChange={(e) => setSettlementData({...settlementData, days_to_resolution: parseInt(e.target.value)})}
+                    min="1"
+                    max="1000"
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: 'none' }}
+                  />
+                </div>
+              </div>
+              <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.75rem', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                {loading ? 'Predicting...' : <>🎯 Predict Settlement</>}
+              </button>
+            </form>
+          </div>
         </div>
+
+        {/* Settlement Results */}
+        {showSettlement && settlementResult && (
+          <div className="results-section" style={{ marginTop: '2rem' }}>
+            <div className="section-header">
+              <Scale size={24} />
+              <h2>Settlement Analysis</h2>
+            </div>
+            
+            <div className="metrics-grid">
+              <div className="metric-card" style={{ gridColumn: '1 / -1' }}>
+                <div className="metric-header">
+                  <TrendingUp size={20} />
+                  <h3>Settlement Probability</h3>
+                </div>
+                <div className="metric-body">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '1rem' }}>
+                    <div className="circular-progress">
+                      <svg viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" className="progress-bg" />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          className="progress-fill"
+                          style={{
+                            stroke: settlementResult.settlement_probability > 0.6 ? '#10b981' : settlementResult.settlement_probability > 0.4 ? '#f59e0b' : '#ef4444',
+                            strokeDashoffset: 283 - (283 * settlementResult.settlement_probability)
+                          }}
+                        />
+                      </svg>
+                      <div className="progress-text">
+                        <span className="progress-value">{(settlementResult.settlement_probability * 100).toFixed(1)}%</span>
+                        <span className="progress-label">{settlementResult.settlement_category}</span>
+                      </div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div className="metric-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Confidence</span>
+                          <span className="detail-value">{settlementResult.confidence}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Estimated Days</span>
+                          <span className="detail-value">{settlementResult.estimated_settlement_days} days</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Mediation Recommended</span>
+                          <span className="detail-value">{settlementResult.recommend_mediation ? '✅ Yes' : '❌ No'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Early Settlement</span>
+                          <span className="detail-value">{settlementResult.recommend_early_settlement ? '✅ Yes' : '❌ No'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ padding: '1rem', background: '#f3f4f6', borderRadius: '8px', marginBottom: '1rem' }}>
+                    <strong>Reasoning:</strong> {settlementResult.reasoning}
+                  </div>
+                  {settlementResult.action_items.length > 0 && (
+                    <div>
+                      <strong>Recommended Actions:</strong>
+                      <ul style={{ marginTop: '0.5rem', paddingLeft: '1.5rem' }}>
+                        {settlementResult.action_items.map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Results Section */}
         {result && (

@@ -191,3 +191,82 @@ async def assign_judge_to_case(
     db.commit()
     
     return {"message": "Judge assigned successfully"}
+
+
+@router.post("/calculate-complexity")
+async def calculate_case_complexity(
+    num_parties: int,
+    num_witnesses: int,
+    evidence_pages: int,
+    case_type: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Auto-calculate case complexity score based on case parameters
+    Returns a score from 1-10
+    """
+    # Base complexity score
+    complexity = 0.0
+    
+    # Factor 1: Number of parties (more parties = more complex)
+    if num_parties <= 2:
+        complexity += 1
+    elif num_parties <= 4:
+        complexity += 2
+    elif num_parties <= 6:
+        complexity += 3
+    else:
+        complexity += 4
+    
+    # Factor 2: Number of witnesses
+    if num_witnesses == 0:
+        complexity += 0.5
+    elif num_witnesses <= 3:
+        complexity += 1
+    elif num_witnesses <= 6:
+        complexity += 1.5
+    elif num_witnesses <= 10:
+        complexity += 2
+    else:
+        complexity += 2.5
+    
+    # Factor 3: Evidence volume
+    if evidence_pages < 50:
+        complexity += 0.5
+    elif evidence_pages < 100:
+        complexity += 1
+    elif evidence_pages < 300:
+        complexity += 1.5
+    elif evidence_pages < 500:
+        complexity += 2
+    else:
+        complexity += 2.5
+    
+    # Factor 4: Case type complexity
+    case_type_weights = {
+        'civil': 1.0,
+        'criminal': 1.5,
+        'family': 1.0,
+        'tax': 2.0,
+        'constitutional': 2.5
+    }
+    complexity += case_type_weights.get(case_type.lower(), 1.0)
+    
+    # Normalize to 1-10 scale
+    complexity_score = min(10, max(1, round(complexity)))
+    
+    return {
+        "complexity_score": complexity_score,
+        "factors": {
+            "num_parties": num_parties,
+            "num_witnesses": num_witnesses,
+            "evidence_pages": evidence_pages,
+            "case_type": case_type
+        },
+        "recommendation": (
+            "Simple case" if complexity_score <= 3 else
+            "Moderate complexity" if complexity_score <= 6 else
+            "Complex case" if complexity_score <= 8 else
+            "Highly complex case"
+        )
+    }
