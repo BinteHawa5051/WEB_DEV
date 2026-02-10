@@ -55,7 +55,9 @@ const Cases: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Cases</h1>
-          <p className="text-gray-600">Manage and track all court cases</p>
+          <p className="text-gray-600">
+            Manage and track all court cases • {filteredCases.length} {filteredCases.length === 1 ? 'case' : 'cases'} found
+          </p>
         </div>
         {user?.role !== 'public' && (
           <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
@@ -170,7 +172,12 @@ const Cases: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(caseItem.filing_date).toLocaleDateString()}
+                      <div>
+                        <div>{new Date(caseItem.filing_date).toLocaleDateString()}</div>
+                        <div className="text-xs text-gray-400">
+                          {Math.floor((new Date().getTime() - new Date(caseItem.filing_date).getTime()) / (1000 * 60 * 60 * 24))} days old
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Link

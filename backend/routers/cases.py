@@ -270,3 +270,123 @@ async def calculate_case_complexity(
             "Highly complex case"
         )
     }
+
+
+@router.get("/{case_id}/delays")
+async def get_case_delays(
+    case_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get delay analysis for a case"""
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Calculate delays
+    filing_date = case.filing_date
+    current_date = datetime.now()
+    days_pending = (current_date - filing_date).days
+    
+    # Get status history to track delays
+    history = db.query(CaseStatusHistory).filter(
+        CaseStatusHistory.case_id == case_id
+    ).order_by(CaseStatusHistory.change_date).all()
+    
+    delays = []
+    expected_days = {
+        "filed": 7,  # Should move to admitted in 7 days
+        "admitted": 30,  # Should be listed in 30 days
+        "listed": 14,  # Should start hearing in 14 days
+        "hearing": 60,  # Should complete in 60 days
+        "reserved": 30  # Judgment in 30 days
+    }
+    
+    for i, event in enumerate(history):
+        if i < len(history) - 1:
+            next_event = history[i + 1]
+            days_in_status = (next_event.change_date - event.change_date).days
+            expected = expected_days.get(event.new_status, 30)
+            
+            if days_in_status > expected:
+                delays.append({
+                    "status": event.new_status,
+                    "expected_days": expected,
+                    "actual_days": days_in_status,
+                    "delay_days": days_in_status - expected,
+                    "reason": event.notes or "No reason provided"
+                })
+    
+    # Calculate total delay
+    total_expected = sum(expected_days.values())
+    total_delay = max(0, days_pending - total_expected)
+    
+    return {
+        "case_id": case_id,
+        "case_number": case.case_number,
+        "filing_date": filing_date.isoformat(),
+        "days_pending": days_pending,
+        "expected_completion_days": total_expected,
+        "total_delay_days": total_delay,
+        "delay_percentage": round((total_delay / total_expected) * 100, 1) if total_expected > 0 else 0,
+        "delays": delays,
+        "is_delayed": total_delay > 0,
+        "urgency_level": case.urgency_level.value if case.urgency_level else None
+    }
+
+@router.get("/delayed")
+async def get_delayed_cases(
+    threshold_days: int = 30,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all cases delayed beyond threshold"""
+    cases = db.query(Case).filter(
+        Case.status.in_(["filed", "admitted", "listed", "hearing", "reserved"])
+    ).all()
+    
+    delayed_cases = []
+    current_date = datetime.now()
+    
+    for case in cases:
+        days_pending = (current_date - case.filing_date).days
+        
+        # Simple delay calculation
+        expected_days = {
+            "filed": 7,
+            "admitted": 37,  # 7 + 30
+            "listed": 51,  # 7 + 30 + 14
+            "hearing": 111,  # 7 + 30 + 14 + 60
+            "reserved": 141  # 7 + 30 + 14 + 60 + 30
+        }
+        
+        expected = expected_days.get(case.status, 30)
+        delay = days_pending - expected
+        
+        if delay > threshold_days:
+            delayed_cases.append({
+                "case_id": case.id,
+                "case_number": case.case_number,
+                "title": case.title,
+                "status": case.status,
+                "urgency_level": case.urgency_level.value if case.urgency_level else None,
+                "filing_date": case.filing_date.isoformat(),
+                "days_pending": days_pending,
+                "expected_days": expected,
+                "delay_days": delay,
+                "delay_severity": "critical" if delay > 90 else "high" if delay > 60 else "moderate"
+            })
+    
+    # Sort by delay (most delayed first)
+    delayed_cases.sort(key=lambda x: x["delay_days"], reverse=True)
+    
+    return {
+        "total_delayed": len(delayed_cases),
+        "threshold_days": threshold_days,
+        "delayed_cases": delayed_cases,
+        "severity_breakdown": {
+            "critical": len([c for c in delayed_cases if c["delay_severity"] == "critical"]),
+            "high": len([c for c in delayed_cases if c["delay_severity"] == "high"]),
+            "moderate": len([c for c in delayed_cases if c["delay_severity"] == "moderate"])
+        }
+    }

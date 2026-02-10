@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 import uvicorn
 from database import get_db, engine
 from models import Base
-from routers import auth, cases, judges, lawyers, scheduling, calendar, documents, ml_predictions
+from routers import auth, cases, judges, lawyers, scheduling, calendar, documents, ml_predictions, courts
 import os
 from dotenv import load_dotenv
 
@@ -38,6 +38,7 @@ app.include_router(scheduling.router, prefix="/api/scheduling", tags=["Schedulin
 app.include_router(calendar.router, prefix="/api/calendar", tags=["Calendar"])
 app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
 app.include_router(ml_predictions.router, prefix="/api/ml", tags=["ML Predictions"])
+app.include_router(courts.router, prefix="/api/courts", tags=["Courts"])
 
 @app.get("/")
 async def root():

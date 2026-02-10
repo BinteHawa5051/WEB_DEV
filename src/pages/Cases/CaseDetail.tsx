@@ -89,13 +89,32 @@ const CaseDetail: React.FC = () => {
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Filing Date</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(caseItem.filing_date).toLocaleDateString()}
+                <dd className="mt-1">
+                  <div className="text-sm text-gray-900">
+                    {new Date(caseItem.filing_date).toLocaleDateString()}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {Math.floor((new Date().getTime() - new Date(caseItem.filing_date).getTime()) / (1000 * 60 * 60 * 24))} days ago
+                  </div>
                 </dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Complexity Score</dt>
-                <dd className="mt-1 text-sm text-gray-900">{caseItem.complexity_score}/10</dd>
+                <dd className="mt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-900">{caseItem.complexity_score}/10</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      caseItem.complexity_score <= 3 ? 'bg-green-100 text-green-800' :
+                      caseItem.complexity_score <= 6 ? 'bg-yellow-100 text-yellow-800' :
+                      caseItem.complexity_score <= 8 ? 'bg-orange-100 text-orange-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {caseItem.complexity_score <= 3 ? 'Simple' :
+                       caseItem.complexity_score <= 6 ? 'Moderate' :
+                       caseItem.complexity_score <= 8 ? 'Complex' : 'Highly Complex'}
+                    </span>
+                  </div>
+                </dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Public Interest Score</dt>

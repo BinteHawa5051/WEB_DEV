@@ -65,6 +65,8 @@ export const casesAPI = {
   assignJudge: (caseId: number, judgeId: number) => 
     api.put(`/cases/${caseId}/assign-judge`, { judge_id: judgeId }),
   calculateComplexity: (data: any) => api.post('/cases/calculate-complexity', null, { params: data }),
+  getCaseDelays: (id: number) => api.get(`/cases/${id}/delays`),
+  getDelayedCases: (thresholdDays?: number) => api.get('/cases/delayed', { params: { threshold_days: thresholdDays } }),
 };
 
 export const judgesAPI = {
@@ -155,4 +157,11 @@ export const mlAPI = {
   
   // ML service status
   getMLStatus: () => api.get('/ml/ml-status'),
+};
+
+
+export const courtsAPI = {
+  getCourts: (level?: string) => api.get('/courts', { params: { level } }),
+  getHierarchy: () => api.get('/courts/hierarchy'),
+  getStatistics: () => api.get('/courts/statistics'),
 };

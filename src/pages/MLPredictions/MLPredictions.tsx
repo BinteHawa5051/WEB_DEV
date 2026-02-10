@@ -367,15 +367,15 @@ const MLPredictions: React.FC = () => {
           </form>
 
           {/* Settlement Probability Section */}
-          <div className="settlement-section" style={{ marginTop: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px', color: 'white' }}>
-            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Scale size={20} />
+          <div className="settlement-section" style={{ marginTop: '2rem', padding: '1.5rem', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '12px' }}>
+            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#000' }}>
+              <Scale size={20} color="#000" />
               Quick Settlement Prediction
             </h3>
             <form onSubmit={handleSettlementPredict}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Case Type</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#000' }}>Case Type</label>
                   <select 
                     value={settlementData.case_type}
                     onChange={(e) => setSettlementData({...settlementData, case_type: e.target.value})}
@@ -388,7 +388,7 @@ const MLPredictions: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>District</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#000' }}>District</label>
                   <select 
                     value={settlementData.district}
                     onChange={(e) => setSettlementData({...settlementData, district: e.target.value})}
@@ -401,7 +401,7 @@ const MLPredictions: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>Days to Resolution</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#000' }}>Days to Resolution</label>
                   <input 
                     type="number"
                     value={settlementData.days_to_resolution}

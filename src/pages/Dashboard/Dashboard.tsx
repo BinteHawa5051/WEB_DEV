@@ -29,6 +29,10 @@ const Dashboard: React.FC = () => {
     calendarAPI.getUpcomingHearings(7)
   );
 
+  const { data: delayedCases } = useQuery('dashboard-delayed', () => 
+    casesAPI.getDelayedCases(30)
+  );
+
   // Calculate statistics
   const totalCases = cases?.data?.length || 0;
   const pendingCases = cases?.data?.filter((c: any) => 
@@ -129,6 +133,46 @@ const Dashboard: React.FC = () => {
         })}
       </div>
 
+      {/* Case Breakdown by Type */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Case Breakdown by Type</h3>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {['civil', 'criminal', 'family', 'tax', 'constitutional'].map((type) => {
+            const count = cases?.data?.filter((c: any) => c.jurisdiction?.toLowerCase() === type).length || 0;
+            return (
+              <div key={type} className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <div className="text-2xl font-bold text-gray-900">{count}</div>
+                <div className="text-sm text-gray-600 capitalize">{type}</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {totalCases > 0 ? Math.round((count / totalCases) * 100) : 0}%
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Case Status Overview */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Case Status Overview</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { status: 'filed', label: 'Filed', color: 'bg-blue-50 text-blue-700' },
+            { status: 'admitted', label: 'Admitted', color: 'bg-purple-50 text-purple-700' },
+            { status: 'hearing', label: 'In Hearing', color: 'bg-yellow-50 text-yellow-700' },
+            { status: 'judgment', label: 'Judgment', color: 'bg-green-50 text-green-700' }
+          ].map((item) => {
+            const count = cases?.data?.filter((c: any) => c.status === item.status).length || 0;
+            return (
+              <div key={item.status} className={`p-4 rounded-lg ${item.color}`}>
+                <div className="text-2xl font-bold">{count}</div>
+                <div className="text-sm font-medium">{item.label}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Cases */}
         <div className="bg-white shadow rounded-lg">
@@ -210,9 +254,54 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Delayed Cases */}
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">
+                Delayed Cases
+              </h3>
+              {delayedCases?.data?.total_delayed > 0 && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  {delayedCases.data.total_delayed} delayed
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {delayedCases?.data?.delayed_cases?.slice(0, 5).map((delayedCase: any) => (
+                <div key={delayedCase.case_id} className="flex items-center justify-between p-3 bg-red-50 rounded-md border border-red-200">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      {delayedCase.case_number}
+                    </p>
+                    <p className="text-sm text-gray-600">{delayedCase.title}</p>
+                    <p className="text-xs text-gray-500">
+                      Status: {delayedCase.status} • {delayedCase.days_pending} days pending
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-medium ${
+                      delayedCase.delay_severity === 'critical' ? 'text-red-600' :
+                      delayedCase.delay_severity === 'high' ? 'text-orange-600' : 'text-yellow-600'
+                    }`}>
+                      +{delayedCase.delay_days} days
+                    </p>
+                    <p className="text-xs text-gray-500 capitalize">
+                      {delayedCase.delay_severity}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {(!delayedCases?.data?.delayed_cases || delayedCases.data.delayed_cases.length === 0) && (
+                <p className="text-gray-500 text-center py-4">No significantly delayed cases</p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Remove duplicate */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
