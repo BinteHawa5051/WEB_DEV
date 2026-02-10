@@ -390,3 +390,89 @@ async def get_delayed_cases(
             "moderate": len([c for c in delayed_cases if c["delay_severity"] == "moderate"])
         }
     }
+
+
+@router.post("/{case_id}/transfer")
+async def transfer_case(
+    case_id: int,
+    target_court_id: int,
+    reason: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Transfer case to another court (appeals, jurisdiction change)"""
+    from models import Court
+    
+    # Check permissions
+    if current_user.role not in ["chief_justice", "court_administrator", "judge"]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    # Get case
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Get target court
+    target_court = db.query(Court).filter(Court.id == target_court_id).first()
+    if not target_court:
+        raise HTTPException(status_code=404, detail="Target court not found")
+    
+    # Store old court info
+    old_court_id = case.court_id
+    old_court = db.query(Court).filter(Court.id == old_court_id).first()
+    
+    # Update case
+    case.court_id = target_court_id
+    case.assigned_judge_id = None  # Unassign judge when transferring
+    
+    # Create status history entry
+    status_history = CaseStatusHistory(
+        case_id=case.id,
+        old_status=case.status,
+        new_status=case.status,
+        changed_by=current_user.id,
+        reason=f"Case transferred from {old_court.name if old_court else 'Unknown'} to {target_court.name}. Reason: {reason}"
+    )
+    
+    db.add(status_history)
+    db.commit()
+    
+    return {
+        "message": "Case transferred successfully",
+        "case_id": case_id,
+        "from_court": old_court.name if old_court else None,
+        "to_court": target_court.name,
+        "reason": reason
+    }
+
+@router.get("/{case_id}/transfer-history")
+async def get_transfer_history(
+    case_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get transfer history for a case"""
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    
+    # Get status history entries related to transfers
+    history = db.query(CaseStatusHistory).filter(
+        CaseStatusHistory.case_id == case_id,
+        CaseStatusHistory.reason.like('%transferred%')
+    ).order_by(CaseStatusHistory.changed_at.desc()).all()
+    
+    transfers = []
+    for entry in history:
+        transfers.append({
+            "date": entry.changed_at.isoformat(),
+            "reason": entry.reason,
+            "changed_by": entry.changed_by
+        })
+    
+    return {
+        "case_id": case_id,
+        "case_number": case.case_number,
+        "current_court_id": case.court_id,
+        "transfers": transfers
+    }

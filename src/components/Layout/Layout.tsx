@@ -12,7 +12,8 @@ import {
   X, 
   LogOut,
   Gavel,
-  Brain
+  Brain,
+  Building2
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -28,10 +29,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Cases', href: '/cases', icon: FileText },
     { name: 'Judges', href: '/judges', icon: Gavel },
+    { name: 'Courts', href: '/courts', icon: Building2 },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Scheduling', href: '/scheduling', icon: Clock },
     { name: 'Documents', href: '/documents', icon: FolderOpen },
     { name: 'ML Predictions', href: '/ml-predictions', icon: Brain },
+    { name: 'Delay Portal', href: '/delay-justification', icon: Users },
   ];
 
   const isActive = (path: string) => {

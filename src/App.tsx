@@ -13,6 +13,8 @@ import Calendar from './pages/Calendar/Calendar';
 import Scheduling from './pages/Scheduling/Scheduling';
 import Documents from './pages/Documents/Documents';
 import MLPredictions from './pages/MLPredictions/MLPredictions';
+import Courts from './pages/Courts/Courts';
+import DelayJustification from './pages/DelayJustification/DelayJustification';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -99,6 +101,16 @@ const AppRoutes: React.FC = () => {
             <MLPredictions />
           </Layout>
         </ProtectedRoute>
+      } />
+      <Route path="/courts" element={
+        <ProtectedRoute>
+          <Layout>
+            <Courts />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      <Route path="/delay-justification" element={
+        <DelayJustification />
       } />
     </Routes>
   );
