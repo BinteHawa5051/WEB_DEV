@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.App {
+  min-height: 100vh;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Loading animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Calendar heatmap styles */
+.calendar-heatmap {
+  font-size: 12px;
+}
+
+.calendar-heatmap .day {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-heatmap .day:hover {
+  stroke: #333;
+  stroke-width: 1px;
+}
+
+/* Drag and drop styles */
+.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+}
+
+.drop-zone {
+  border: 2px dashed #3b82f6;
+  background-color: #eff6ff;
+}
+
+/* Status badges */
+.status-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-filed {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.status-admitted {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.status-listed {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.status-hearing {
+  @apply bg-orange-100 text-orange-800;
+}
+
+.status-reserved {
+  @apply bg-purple-100 text-purple-800;
+}
+
+.status-judgment {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-archived {
+  @apply bg-gray-100 text-gray-800;
+}
+
+/* Urgency badges */
+.urgency-habeas-corpus {
+  @apply bg-red-100 text-red-800;
+}
+
+.urgency-bail {
+  @apply bg-orange-100 text-orange-800;
+}
+
+.urgency-injunction {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.urgency-regular {
+  @apply bg-gray-100 text-gray-800;
+}
