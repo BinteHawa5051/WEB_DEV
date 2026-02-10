@@ -77,8 +77,6 @@ export const judgesAPI = {
     api.post('/judges/recusals', { judge_id: judgeId, case_id: caseId, reason }),
   getWorkloadAnalysis: (courtId?: number) => 
     api.get('/judges/workload-analysis', { params: { court_id: courtId } }),
-};
-    api.post(`/judges/${judgeId}/recusal`, { case_id: caseId, reason }),
   getWorkload: (id: number) => api.get(`/judges/${id}/workload`),
   getSchedule: (id: number, startDate?: string, endDate?: string) => 
     api.get(`/judges/${id}/schedule`, { params: { start_date: startDate, end_date: endDate } }),
